@@ -1,0 +1,10 @@
+# Netlify build config. (Vercel auto-detects Vite and ignores this file.)
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback — harmless for the single-page app, future-proofs client routes.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

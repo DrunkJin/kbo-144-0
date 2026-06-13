@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+.vercel
+.netlify
+npm-debug.log*
+
+# Large intermediates — NOT needed to run/deploy the site (the web uses the
+# chunked files in public/data/, which ARE committed). Regenerate with
+# `npm run ingest` from the Kaggle CSVs. Raw CSVs kept out for size/licensing.
+/data/raw/
+/data/players.json

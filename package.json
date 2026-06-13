@@ -1,0 +1,30 @@
+{
+  "name": "kbo-144-0",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "144-0 — KBO all-time draft game. Spin the wheel, draft a roster from every KBO season (1982~), simulate 144 games, chase a perfect undefeated season.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "demo": "node --experimental-strip-types src/demo.ts",
+    "ingest": "node --experimental-strip-types scripts/ingest-kaggle.ts",
+    "check": "node --experimental-strip-types scripts/check.ts"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}
