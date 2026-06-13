@@ -11,3 +11,6 @@ npm-debug.log*
 # `npm run ingest` from the Kaggle CSVs. Raw CSVs kept out for size/licensing.
 /data/raw/
 /data/players.json
+
+# stray crash dumps
+*.stackdump
