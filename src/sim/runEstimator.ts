@@ -23,6 +23,7 @@ export interface LeagueConstants {
   era: number; // league ERA (pitching yardstick)
   obp: number; // league on-base % (for leadoff/role fit)
   iso: number; // league isolated power SLG-AVG (for cleanup/role fit)
+  avg: number; // league batting average (for contact-role fit)
 }
 
 export const DEFAULT_LEAGUE: LeagueConstants = {
@@ -34,6 +35,7 @@ export const DEFAULT_LEAGUE: LeagueConstants = {
   era: 4.2,
   obp: 0.34,
   iso: 0.13,
+  avg: 0.265,
 };
 
 export type LeagueLookup = Record<number, LeagueConstants>;
@@ -79,24 +81,37 @@ export function OBP(b: BatLine): number {
 export function ISO(b: BatLine): number {
   return b.AB > 0 ? (b.d2B + 2 * b.d3B + 3 * b.HR) / b.AB : 0;
 }
+/** Batting average. */
+export function AVG(b: BatLine): number {
+  return b.AB > 0 ? b.H / b.AB : 0;
+}
 
 // ── Batting-order ROLE fit ───────────────────────────────────────────────────
-// Each slot wants a different skill shape: leadoff → on-base + speed, the heart
-// (3-5) → power, etc. Raw "need" weights, then CENTERED per skill (column mean
-// removed) so a player's raw skill level doesn't inflate the total — only how
-// well his SHAPE matches the slot does. This is what makes "put the slugger at
-// cleanup, the speedster at leadoff" actually raise the team's rating.
+// Each slot's ideal skill shape, per canonical lineup theory:
+//   1: 최고 출루 + 주루          2: 작전·정확도 + 출루 (1번과 유사)
+//   3: 팀 최고 타율 + 주루       4: 가장 신뢰 + 장타
+//   5: 찬스 강함 + 장타          6: 클린업 받침, 한방
+//   7: 해결사 (찬스 의외로 많음)  8: 수비형(공격 기대 ↓, 주로 포수)
+//   9: 하위타선 1번 — 출루 + 주루
+// "찬스/해결사"는 기록으로 직접 안 잡혀 장타+정확도(득점 생산력)로 프록시.
+// 4개 차원: ob(출루) avg(정확도) pw(장타) sp(주루). 각 차원은 9슬롯 평균을
+// 빼서 CENTER → 절대 실력이 아니라 슬롯 수요와의 '형태 매칭'만 점수화.
 const ROLE_RAW = {
-  ob: [1.4, 1.2, 1.0, 0.8, 0.8, 0.9, 1.0, 1.0, 1.2], // on-base need
-  pw: [0.4, 0.6, 1.3, 1.5, 1.3, 1.0, 0.7, 0.5, 0.4], // power need
-  sp: [1.5, 1.0, 0.4, 0.1, 0.2, 0.5, 0.8, 1.0, 1.3], // speed need
+  //     1     2     3     4     5     6     7     8     9
+  ob: [1.5, 1.4, 1.1, 1.0, 0.9, 0.8, 0.8, 0.6, 1.3],
+  avg: [0.8, 1.1, 1.5, 1.0, 0.9, 0.8, 0.9, 0.6, 0.9],
+  pw: [0.3, 0.4, 0.9, 1.5, 1.4, 1.2, 1.0, 0.5, 0.4],
+  sp: [1.4, 1.0, 0.9, 0.2, 0.2, 0.3, 0.4, 0.4, 1.3],
 };
 function center(a: number[]): number[] {
   const m = a.reduce((x, y) => x + y, 0) / a.length;
   return a.map((v) => v - m);
 }
-const ROLE = { ob: center(ROLE_RAW.ob), pw: center(ROLE_RAW.pw), sp: center(ROLE_RAW.sp) };
-const PLACE_K = 0.06; // strength of the role-fit lever (runs/PA scale)
+const ROLE = {
+  ob: center(ROLE_RAW.ob), avg: center(ROLE_RAW.avg),
+  pw: center(ROLE_RAW.pw), sp: center(ROLE_RAW.sp),
+};
+const PLACE_K = 0.05; // strength of the role-fit lever (runs/PA scale)
 
 /** FIP for one pitching line, scaled by the given (season-specific) constant. */
 export function fip(p: PitLine, fipConstant: number = DEFAULT_LEAGUE.fipConstant): number {
@@ -131,10 +146,11 @@ export function expectedRunsScored(
 
     // role fit: how well this player's skill SHAPE matches his slot's needs
     if (i < 9) {
-      const obpN = (OBP(b) - lg.obp) / 0.05; // on-base lean
-      const isoN = (ISO(b) - lg.iso) / 0.06; // power lean
-      const spdN = (b.SB / b.PA - 0.02) / 0.03; // speed lean
-      place += ROLE.ob[i] * obpN + ROLE.pw[i] * isoN + ROLE.sp[i] * spdN;
+      const obpN = (OBP(b) - lg.obp) / 0.05; // 출루 lean
+      const avgN = (AVG(b) - lg.avg) / 0.035; // 정확도 lean
+      const isoN = (ISO(b) - lg.iso) / 0.06; // 장타 lean
+      const spdN = (b.SB / b.PA - 0.02) / 0.03; // 주루 lean
+      place += ROLE.ob[i] * obpN + ROLE.avg[i] * avgN + ROLE.pw[i] * isoN + ROLE.sp[i] * spdN;
     }
   });
   const placementBonus = (PLACE_K * place) / 9; // runs/PA from good role placement

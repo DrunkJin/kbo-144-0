@@ -24,18 +24,19 @@ function rawFipNumerator(p: NonNullable<Player["pit"]>): number {
 }
 
 export function buildLeagueTable(players: Player[]): LeagueTable {
-  const bat = new Map<number, { wxpa: number; pa: number; ob: number; ab: number; xb: number }>();
+  const bat = new Map<number, { wxpa: number; pa: number; ob: number; ab: number; xb: number; h: number }>();
   const pit = new Map<number, { er: number; ip: number; rawfip: number }>();
 
   for (const p of players) {
     if (p.bat && p.bat.PA > 0) {
-      const b = bat.get(p.season) ?? { wxpa: 0, pa: 0, ob: 0, ab: 0, xb: 0 };
+      const b = bat.get(p.season) ?? { wxpa: 0, pa: 0, ob: 0, ab: 0, xb: 0, h: 0 };
       const bl = p.bat;
       b.wxpa += wOBA(bl) * bl.PA;
       b.pa += bl.PA;
       b.ob += bl.H + bl.BB + bl.HBP;
       b.ab += bl.AB;
       b.xb += bl.d2B + 2 * bl.d3B + 3 * bl.HR;
+      b.h += bl.H;
       bat.set(p.season, b);
     }
     if (p.pit && p.pit.IP > 0) {
@@ -72,6 +73,7 @@ export function buildLeagueTable(players: Player[]): LeagueTable {
       era,
       obp: b.ob / b.pa,
       iso: b.ab > 0 ? b.xb / b.ab : DEFAULT_LEAGUE.iso,
+      avg: b.ab > 0 ? b.h / b.ab : DEFAULT_LEAGUE.avg,
     };
   }
   return table;

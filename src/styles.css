@@ -113,16 +113,17 @@ h1 .num { color: var(--accent); }
 
 /* arrange (lineup ordering) */
 .order-list { display: flex; flex-direction: column; gap: 6px; }
-.order-row { display: grid; grid-template-columns: 24px 56px 1fr auto auto; align-items: center; gap: 8px; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
-.order-num { font-weight: 800; color: var(--accent); text-align: center; }
-.order-pos { font-size: 0.78rem; color: var(--muted); }
-.order-name { font-weight: 600; }
-.order-stat { font-size: 0.78rem; }
-.order-btns { display: flex; gap: 4px; }
+.order-row { display: flex; align-items: center; gap: 8px; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+.order-num { font-weight: 800; color: var(--accent); width: 18px; text-align: center; flex: 0 0 auto; }
+.order-role { font-size: 0.72rem; font-weight: 700; color: var(--accent2); background: rgba(56,189,248,0.14); padding: 1px 7px; border-radius: 999px; flex: 0 0 auto; width: 84px; text-align: center; }
+.order-pos { font-size: 0.78rem; color: var(--muted); flex: 0 0 auto; width: 48px; }
+.order-name { font-weight: 600; flex: 1 1 auto; }
+.order-stat { font-size: 0.78rem; flex: 0 0 auto; }
+.order-btns { display: flex; gap: 4px; flex: 0 0 auto; }
 .btn.sm { padding: 4px 10px; font-size: 0.85rem; border-radius: 6px; }
 @media (max-width: 640px) {
-  .order-row { grid-template-columns: 20px 44px 1fr auto; }
   .order-stat { display: none; }
+  .order-role { width: 64px; font-size: 0.66rem; }
 }
 
 /* share card */

@@ -13,13 +13,20 @@ function move<T>(arr: T[], from: number, to: number): T[] {
   return copy;
 }
 
+// 각 타순이 원하는 역할 (사용자 정의 정통 타순 이론)
+const LINEUP_ROLES = [
+  "출루·주루", "작전·출루", "정확도·주루", "중심·장타", "찬스·장타",
+  "한방", "해결사", "수비형", "제2의 1번",
+];
+
 function OrderList({
-  title, hint, items, showStats, onReorder,
+  title, hint, items, showStats, roles, onReorder,
 }: {
   title: string;
   hint: string;
   items: Player[];
   showStats: boolean;
+  roles?: string[];
   onReorder: (next: Player[]) => void;
 }) {
   return (
@@ -30,6 +37,7 @@ function OrderList({
         {items.map((p, i) => (
           <div className="order-row" key={p.id}>
             <span className="order-num">{i + 1}</span>
+            {roles && <span className="order-role">{roles[i] ?? ""}</span>}
             <span className="order-pos">{posKR(p.primaryPos)}</span>
             <span className="order-name">{p.name} <span className="muted">{p.season}</span></span>
             {showStats && <span className="order-stat muted">{statLine(p)}</span>}
@@ -69,9 +77,10 @@ export function Arrange({
 
       <OrderList
         title="타순 (1~9번)"
-        hint="1번타자가 가장 많은 타석에 들어섭니다 — 출루·장타 좋은 타자를 위로."
+        hint="각 타순의 역할에 맞는 선수를 배치하세요 — 맞을수록 팀 공격 OVR이 오릅니다."
         items={lineup}
         showStats={showStats}
+        roles={LINEUP_ROLES}
         onReorder={setLineup}
       />
       <OrderList
