@@ -21,6 +21,8 @@ export interface LeagueConstants {
   paPerGame: number; // team PA per game (~38)
   fipConstant: number; // makes league-avg FIP == league ERA that season
   era: number; // league ERA (pitching yardstick)
+  obp: number; // league on-base % (for leadoff/role fit)
+  iso: number; // league isolated power SLG-AVG (for cleanup/role fit)
 }
 
 export const DEFAULT_LEAGUE: LeagueConstants = {
@@ -30,6 +32,8 @@ export const DEFAULT_LEAGUE: LeagueConstants = {
   paPerGame: 38,
   fipConstant: 3.1,
   era: 4.2,
+  obp: 0.34,
+  iso: 0.13,
 };
 
 export type LeagueLookup = Record<number, LeagueConstants>;
@@ -42,12 +46,13 @@ function own(table: LeagueLookup | undefined, season: number, target: LeagueCons
 // wOBA linear weights (per event).
 const W = { BB: 0.69, HBP: 0.72, b1: 0.89, b2: 1.27, b3: 1.62, HR: 2.1 };
 
-// Plate appearances per batting-order slot (1→9). Top of the order bats more,
-// so lineup ORDER matters — put your best hitters up top.
-const BAT_PA = [4.65, 4.55, 4.45, 4.35, 4.25, 4.15, 4.05, 3.95, 3.85];
-// Relative innings by rotation slot (ace → #5). Order your rotation: the ace
-// (slot 1) throws the most innings over a season.
-const ROT_W = [1.18, 1.08, 1.0, 0.92, 0.82];
+// Weight per batting-order slot (1→9). Exaggerated beyond real PA splits so
+// lineup ORDER is a meaningful lever — stacking your best bats up top noticeably
+// raises run production.
+const BAT_PA = [6.2, 5.1, 4.2, 3.5, 2.9, 2.4, 1.9, 1.4, 0.9];
+// Relative weight by rotation slot (ace → #5). Ace-heavy so ordering the
+// rotation matters: your best arm carries far more of the load.
+const ROT_W = [1.8, 1.35, 1.0, 0.65, 0.35];
 
 function singles(b: BatLine): number {
   return b.H - b.d2B - b.d3B - b.HR;
@@ -65,6 +70,33 @@ export function wOBA(b: BatLine): number {
     W.HR * b.HR;
   return num / b.PA;
 }
+
+/** On-base %. */
+export function OBP(b: BatLine): number {
+  return b.PA > 0 ? (b.H + b.BB + b.HBP) / b.PA : 0;
+}
+/** Isolated power (SLG − AVG): extra bases per at-bat. */
+export function ISO(b: BatLine): number {
+  return b.AB > 0 ? (b.d2B + 2 * b.d3B + 3 * b.HR) / b.AB : 0;
+}
+
+// ── Batting-order ROLE fit ───────────────────────────────────────────────────
+// Each slot wants a different skill shape: leadoff → on-base + speed, the heart
+// (3-5) → power, etc. Raw "need" weights, then CENTERED per skill (column mean
+// removed) so a player's raw skill level doesn't inflate the total — only how
+// well his SHAPE matches the slot does. This is what makes "put the slugger at
+// cleanup, the speedster at leadoff" actually raise the team's rating.
+const ROLE_RAW = {
+  ob: [1.4, 1.2, 1.0, 0.8, 0.8, 0.9, 1.0, 1.0, 1.2], // on-base need
+  pw: [0.4, 0.6, 1.3, 1.5, 1.3, 1.0, 0.7, 0.5, 0.4], // power need
+  sp: [1.5, 1.0, 0.4, 0.1, 0.2, 0.5, 0.8, 1.0, 1.3], // speed need
+};
+function center(a: number[]): number[] {
+  const m = a.reduce((x, y) => x + y, 0) / a.length;
+  return a.map((v) => v - m);
+}
+const ROLE = { ob: center(ROLE_RAW.ob), pw: center(ROLE_RAW.pw), sp: center(ROLE_RAW.sp) };
+const PLACE_K = 0.06; // strength of the role-fit lever (runs/PA scale)
 
 /** FIP for one pitching line, scaled by the given (season-specific) constant. */
 export function fip(p: PitLine, fipConstant: number = DEFAULT_LEAGUE.fipConstant): number {
@@ -88,6 +120,7 @@ export function expectedRunsScored(
   // Weight by batting-order slot (not raw PA), so lineup order matters.
   let wxpa = 0;
   let wsum = 0;
+  let place = 0; // role-fit bonus accumulator
   hitters.forEach((p, i) => {
     const b = p.bat!;
     const lg = own(table, p.season, target);
@@ -95,9 +128,25 @@ export function expectedRunsScored(
     const w = BAT_PA[Math.min(i, BAT_PA.length - 1)];
     wxpa += wraaPerPA * w;
     wsum += w;
+
+    // role fit: how well this player's skill SHAPE matches his slot's needs
+    if (i < 9) {
+      const obpN = (OBP(b) - lg.obp) / 0.05; // on-base lean
+      const isoN = (ISO(b) - lg.iso) / 0.06; // power lean
+      const spdN = (b.SB / b.PA - 0.02) / 0.03; // speed lean
+      place += ROLE.ob[i] * obpN + ROLE.pw[i] * isoN + ROLE.sp[i] * spdN;
+    }
   });
-  const teamWraaPerPA = wxpa / wsum;
-  const runsPerPA = target.rPA + teamWraaPerPA;
+  const placementBonus = (PLACE_K * place) / 9; // runs/PA from good role placement
+
+  // Diminishing returns: a lineup of nine all-time-great seasons would, under a
+  // purely linear model, "score" ~10 runs/game — beyond anything real. tanh
+  // saturates the extremes so elite lineups top out near a believable ceiling
+  // while average lineups are essentially unchanged.
+  const teamWraaPerPA = wxpa / wsum + placementBonus;
+  const OFF_SCALE = 0.12;
+  const eff = OFF_SCALE * Math.tanh(teamWraaPerPA / OFF_SCALE);
+  const runsPerPA = target.rPA + eff;
   return Math.max(0.5, runsPerPA * target.paPerGame);
 }
 
@@ -122,19 +171,32 @@ export function expectedRunsAllowed(
   };
   const rot = rotation.filter((p) => p.pit && p.pit.IP > 0);
   const bp = bullpen.filter((p) => p.pit && p.pit.IP > 0);
+  const replacement = target.era + 1.0; // mop-up / replacement-level arm
 
-  // Rotation weighted by slot (ace throws more); bullpen weighted evenly.
+  // Rotation weighted by slot (ace throws more); thin rotations get replacement
+  // innings (you can't run a season on 2 starters).
   let rnum = 0;
   let rw = 0;
-  rot.forEach((p, i) => {
+  for (let i = 0; i < 5; i++) {
     const w = ROT_W[Math.min(i, ROT_W.length - 1)];
-    rnum += effFip(p) * w;
+    rnum += (rot[i] ? effFip(rot[i]) : replacement) * w;
     rw += w;
-  });
-  const rotFip = rw ? rnum / rw : target.era;
-  const bpFip = bp.length ? bp.reduce((s, p) => s + effFip(p), 0) / bp.length : target.era;
+  }
+  const rotFip = rnum / rw;
 
-  const ra = (rotFip * SP_IP + bpFip * BP_IP) / (SP_IP + BP_IP);
+  // Bullpen depth matters: ~4 arms needed to cover the relief innings. A lone
+  // elite closer can't pitch all 3.5 relief innings every night — the rest is
+  // replacement level. (Fixes the Simple-roster "1 closer" exploit.)
+  const NEEDED_RP = 4;
+  const bpQuality = bp.length ? bp.reduce((s, p) => s + effFip(p), 0) / bp.length : replacement;
+  const coverage = Math.min(1, bp.length / NEEDED_RP);
+  const bpFip = bpQuality * coverage + replacement * (1 - coverage);
+
+  // Diminishing returns on run prevention, mirroring the offense ceiling.
+  const raw = (rotFip * SP_IP + bpFip * BP_IP) / (SP_IP + BP_IP);
+  const DEF_SCALE = 1.6;
+  const margin = target.era - raw; // runs/9 below league
+  const ra = target.era - DEF_SCALE * Math.tanh(margin / DEF_SCALE);
   return Math.max(0.5, ra);
 }
 

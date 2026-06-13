@@ -44,10 +44,16 @@ export function ratingsVisible(s: GameSettings): boolean {
   return s.difficulty === "hard" ? false : s.showRatings;
 }
 
+/** Opponent strength boost by difficulty — how hard the league pushes back.
+ *  Tuned so Normal lands even a stacked team mid-table (1위 is a real chase). */
+export function oppBoostFor(d: Difficulty): number {
+  return d === "easy" ? 0.06 : d === "normal" ? 0.16 : 0.24;
+}
+
 export const DIFFICULTY_INFO: Record<Difficulty, { label: string; desc: string }> = {
-  easy: { label: "이지", desc: "리롤 3회" },
-  normal: { label: "노멀", desc: "리롤 1회" },
-  hard: { label: "하드", desc: "리롤 없음 · 스탯 숨김" },
+  easy: { label: "이지", desc: "리롤 3회 · 상대 약함" },
+  normal: { label: "노멀", desc: "리롤 1회 · 상대 강함" },
+  hard: { label: "하드", desc: "리롤 없음 · 스탯 숨김 · 상대 최강" },
 };
 
 /** Era presets — set the lower bound of the year range. */

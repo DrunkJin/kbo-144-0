@@ -13,7 +13,7 @@ import { mulberry32, hashSeed } from "./sim/rng.ts";
 import { wOBA, fip, DEFAULT_LEAGUE, type LeagueConstants } from "./sim/runEstimator.ts";
 import type { LeagueTable } from "./sim/leagueTable.ts";
 import {
-  type GameSettings, defaultSettings, rerollsFor, ratingsVisible,
+  type GameSettings, defaultSettings, rerollsFor, ratingsVisible, oppBoostFor,
 } from "./settings.ts";
 import { DraftBoard } from "./ui/DraftBoard.tsx";
 import { Results } from "./ui/Results.tsx";
@@ -32,6 +32,7 @@ interface SeasonSetup {
   target: LeagueConstants;
   year: number;
   seed: number;
+  oppBoost: number;
 }
 
 export function App() {
@@ -170,13 +171,14 @@ export function App() {
     }
     const seed = hashSeed(draft.picks.map((p) => p.id).join("|") + ":" + year);
     const target = leagueTable[year] ?? DEFAULT_LEAGUE;
+    const oppBoost = oppBoostFor(settings.difficulty);
     setOppYear(year);
 
     if (settings.seasonMode === "manager") {
-      setSeasonSetup({ myTeam, opponents, target, year, seed });
+      setSeasonSetup({ myTeam, opponents, target, year, seed, oppBoost });
       setPhase("season");
     } else {
-      setResult(simulateLeague(myTeam, opponents, { totalGames: 144, seed, lg: target, table: leagueTable }));
+      setResult(simulateLeague(myTeam, opponents, { totalGames: 144, seed, lg: target, table: leagueTable, oppBoost }));
       setPhase("result");
     }
     } catch (e) {
@@ -311,7 +313,7 @@ export function App() {
       )}
 
       {phase === "arrange" && arrangeTeam && (
-        <Arrange team={arrangeTeam} showStats={showStats} onConfirm={startSeason} />
+        <Arrange team={arrangeTeam} showStats={showStats} table={leagueTable} onConfirm={startSeason} />
       )}
 
       {phase === "season" && seasonSetup && (
@@ -322,6 +324,7 @@ export function App() {
           table={leagueTable}
           seed={seasonSetup.seed}
           difficulty={settings.difficulty}
+          oppBoost={seasonSetup.oppBoost}
           onFinish={(r) => { setResult(r); setPhase("result"); }}
         />
       )}

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { Player, Team } from "../types.ts";
+import type { LeagueTable } from "../sim/leagueTable.ts";
 import { wOBA, fip } from "../sim/runEstimator.ts";
+import { TeamRating } from "./TeamRating.tsx";
 import { posKR, statLine } from "./fmt.ts";
 
 function move<T>(arr: T[], from: number, to: number): T[] {
@@ -43,10 +45,11 @@ function OrderList({
 }
 
 export function Arrange({
-  team, showStats, onConfirm,
+  team, showStats, table, onConfirm,
 }: {
   team: Team;
   showStats: boolean;
+  table?: LeagueTable;
   onConfirm: (ordered: Team) => void;
 }) {
   // Sensible defaults: bat best hitters first, ace first in the rotation.
@@ -60,7 +63,9 @@ export function Arrange({
   return (
     <div>
       <h1 style={{ fontSize: "1.4rem" }}>라인업 정렬</h1>
-      <p className="sub">타순과 선발 로테이션 순서를 정하세요. 위쪽일수록 더 많은 기회를 받습니다.</p>
+      <p className="sub">1번=출루·주루형, 3·4번=장타자처럼 역할에 맞게 배치하면 팀 OVR이 오릅니다.</p>
+
+      {showStats && <TeamRating team={{ ...team, lineup, rotation }} table={table} />}
 
       <OrderList
         title="타순 (1~9번)"

@@ -11,7 +11,7 @@ import { TACTICS, tacticUsesFor } from "../tactics.ts";
 const clamp = (p: number) => Math.min(0.999, Math.max(0.001, p));
 
 export function SeasonPlay({
-  myTeam, opponents, target, table, seed, difficulty, totalGames = 144, onFinish,
+  myTeam, opponents, target, table, seed, difficulty, oppBoost = 0, totalGames = 144, onFinish,
 }: {
   myTeam: Team;
   opponents: Team[];
@@ -19,10 +19,11 @@ export function SeasonPlay({
   table: LeagueLookup;
   seed: number;
   difficulty: "easy" | "normal" | "hard";
+  oppBoost?: number;
   totalGames?: number;
   onFinish: (result: LeagueResult) => void;
 }) {
-  const { me, opps } = useMemo(() => teamProbs(myTeam, opponents, target, table), [myTeam, opponents, target, table]);
+  const { me, opps } = useMemo(() => teamProbs(myTeam, opponents, target, table, oppBoost), [myTeam, opponents, target, table, oppBoost]);
   const gamesPerPair = leagueGamesPerPair(opponents.length, totalGames);
   const rngRef = useRef<() => number>();
   if (!rngRef.current) rngRef.current = mulberry32(seed);

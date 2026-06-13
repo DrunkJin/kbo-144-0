@@ -45,6 +45,7 @@ export interface SimOptions {
   seed?: number; // default fixed for reproducibility
   lg?: LeagueConstants; // target run environment (e.g. the opponent year's constants)
   table?: LeagueLookup; // per-season constants for era adjustment
+  oppBoost?: number; // difficulty dial: raises opponent strength (0–~0.3)
 }
 
 export function simulateSeason(
@@ -127,17 +128,24 @@ export function leagueGamesPerPair(numOpponents: number, totalGames = 144): numb
   return Math.max(1, Math.round(totalGames / Math.max(1, numOpponents)));
 }
 
-/** My pythag strength + per-opponent win probabilities. */
+/**
+ * My pythag strength + per-opponent win probabilities.
+ * `oppBoost` (0–~0.3) raises every opponent's strength — the difficulty dial.
+ * The boost applies to the stored pythag too, so opponents are uniformly
+ * tougher both against me AND in their own round-robin (a real elite league).
+ */
 export function teamProbs(
   myTeam: Team,
   opponents: Team[],
   lg: LeagueConstants = DEFAULT_LEAGUE,
   table?: LeagueLookup,
+  oppBoost = 0,
 ): { me: TeamStrength; opps: OppProb[] } {
   const me = teamStrength(myTeam, lg, table);
   const opps = opponents.map((o) => {
     const s = teamStrength(o, lg, table);
-    return { name: o.name, pythag: s.pythagWinPct, prob: log5(me.pythagWinPct, s.pythagWinPct) };
+    const pythag = Math.min(0.92, s.pythagWinPct + oppBoost);
+    return { name: o.name, pythag, prob: log5(me.pythagWinPct, pythag) };
   });
   return { me, opps };
 }
@@ -207,7 +215,7 @@ export function simulateLeague(myTeam: Team, opponents: Team[], opts: SimOptions
   if (opponents.length === 0) throw new Error("Need at least one opponent team.");
   const rng = mulberry32(opts.seed ?? 144000);
 
-  const { me, opps } = teamProbs(myTeam, opponents, lg, table);
+  const { me, opps } = teamProbs(myTeam, opponents, lg, table, opts.oppBoost ?? 0);
   const gamesPerPair = leagueGamesPerPair(opponents.length, totalGames);
 
   const vs: OpponentResult[] = opps.map((o) => {
