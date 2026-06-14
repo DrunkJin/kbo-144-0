@@ -9,19 +9,14 @@
 // No external deps — tiny CSV parser inline. Run with node --experimental-strip-types.
 // ────────────────────────────────────────────────────────────────────────────
 
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync, rmSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { BatLine, PitLine, Player, Position } from "../src/types.ts";
-import { buildLeagueTable } from "../src/sim/leagueTable.ts";
-import { buildPrimeIndex } from "../src/data/load.ts";
+import { buildOutputs } from "./lib/buildOutputs.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RAW_DIR = join(__dirname, "../data/raw");
-// Full dataset for node scripts (NOT public — kept out of the web bundle).
-const OUT_FILE = join(__dirname, "../data/players.json");
-// Web-served chunks the app fetches lazily.
-const PUB = join(__dirname, "../public/data");
 
 // ── Column mapping — EDIT to match your CSV headers (case-insensitive) ───────
 // Different Kaggle datasets name columns differently (e.g. "2B" vs "doubles",
@@ -173,47 +168,7 @@ function main() {
     console.log(`  ${f}  [${kind}]  ${ok}/${recs.length} rows`);
   }
 
-  // ── full dataset (for node scripts) ──
-  mkdirSync(dirname(OUT_FILE), { recursive: true });
-  writeFileSync(OUT_FILE, JSON.stringify(players, null, 0));
-
-  // ── chunked, web-served outputs ──
-  const seasonsDir = join(PUB, "seasons");
-  rmSync(seasonsDir, { recursive: true, force: true });
-  mkdirSync(seasonsDir, { recursive: true });
-
-  const bySeason = new Map<number, Player[]>();
-  for (const p of players) {
-    const arr = bySeason.get(p.season) ?? [];
-    arr.push(p);
-    bySeason.set(p.season, arr);
-  }
-  const seasons = [...bySeason.keys()].sort((a, b) => a - b);
-  for (const [year, arr] of bySeason) {
-    writeFileSync(join(seasonsDir, `${year}.json`), JSON.stringify(arr, null, 0));
-  }
-
-  // tiny index (loaded instantly on startup)
-  writeFileSync(join(PUB, "index.json"), JSON.stringify({
-    seasons, minSeason: seasons[0], maxSeason: seasons[seasons.length - 1],
-    totalPlayers: players.length,
-  }));
-
-  // precomputed per-season league constants — removes the need to load all
-  // players client-side just to era-adjust.
-  writeFileSync(join(PUB, "league-table.json"), JSON.stringify(buildLeagueTable(players)));
-
-  // prime index: career-best season per player (lazy-loaded only in Prime mode)
-  const prime = buildPrimeIndex(players);
-  const primeObj: Record<string, unknown> = {};
-  for (const [k, p] of prime) {
-    primeObj[k] = { season: p.season, bat: p.bat, pit: p.pit, war: p.war, rarity: p.rarity };
-  }
-  writeFileSync(join(PUB, "prime.json"), JSON.stringify(primeObj));
-
-  console.log(`\n✅  ${players.length} player-seasons`);
-  console.log(`    full: ${OUT_FILE}`);
-  console.log(`    web : ${seasons.length} season chunks + index + league-table + prime → ${PUB}`);
+  buildOutputs(players);
 }
 
 main();

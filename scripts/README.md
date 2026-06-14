@@ -39,6 +39,26 @@ npm run ingest
   - `public/data/seasons/<year>.json` — 시즌별 선수 청크 (필요 연도만 lazy-load)
   - `public/data/prime.json` — 선수별 통산 최고 시즌(전성기 모드 전용, lazy-load)
 
-## 4. 남은 데이터 작업
+## 4. 매 시즌 갱신 — KBO 공식 크롤러 (`npm run crawl`)
+
+Kaggle는 과거 백필용. 새 시즌은 KBO 공식 기록실을 크롤링해 증분 갱신:
+
+```bash
+npm run crawl 2025            # 한 시즌
+npm run crawl 2023 2024 2025  # 여러 시즌
+npm run crawl 2025 --debug    # 발견한 표 헤더 덤프(문제 진단용)
+```
+
+- 동작: 타자/투수 기록 페이지(Basic+Detail1)를 받아 표를 파싱 → 정규화 →
+  `data/players.json`의 해당 시즌 교체 → 웹 청크 재생성. (`scripts/crawl-kbo.ts`)
+- 설계: ASP.NET 포스트백으로 연도 선택, **헤더 텍스트 기반 매핑**이라 긴
+  ASP.NET id 변경에 강함. 요청 간 1.5초 지연, 쿠키 유지, 재시도.
+- robots.txt: `/Record/`는 허용(`/ws/`,`/Common/` 차단). 출처 존중·rate-limit 준수.
+- ⚠️ 해외 IP에선 `Basic.aspx`가 에러 리다이렉트될 수 있음 → **한국 네트워크에서 실행**.
+  DOM이 바뀌면 `--debug`로 헤더를 확인하고 `HEADER_MAP`만 손보면 됨.
+- ⚠️ 공식 페이지엔 **WAR·수비 포지션이 없음** → 크롤 선수는 WAR 0·타자 DH로 들어감.
+  정확한 포지션/WAR는 Statiz 등으로 보강하거나 Kaggle 백필과 병합 권장.
+
+## 5. 남은 데이터 작업
 - **포지션**: 대부분의 스탯 CSV에는 수비 포지션이 없어 타자는 기본 `DH`로 들어갑니다. 포지션 컬럼이나 수비 데이터를 붙여 `inferBatPos()`를 개선해야 라인업 슬롯이 제대로 채워집니다.
 - **리그 상수 보정**: 연도별 리그평균 wOBA/FIP를 그 해 팀 집계로 산출해 `runEstimator.ts`의 `DEFAULT_LEAGUE`를 시즌별로 대체 (시대보정).
