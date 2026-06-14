@@ -111,6 +111,16 @@ h1 .num { color: var(--accent); }
 .tactic .t-label { font-weight: 700; margin-top: 2px; }
 .tactic .t-desc { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
 
+/* expected-rank odds (arrange screen) */
+.odds { margin-bottom: 14px; }
+.odds-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+.odds-row b { font-size: 1.5rem; font-weight: 800; }
+.odds-bars { display: flex; align-items: flex-end; gap: 4px; height: 64px; margin-top: 14px; }
+.odds-bar { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.odds-bar .odds-fill { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
+.odds-bar:first-child .odds-fill { background: var(--gold); }
+.odds-bar span { font-size: 0.65rem; color: var(--muted); margin-top: 3px; }
+
 /* arrange (lineup ordering) */
 .order-list { display: flex; flex-direction: column; gap: 6px; }
 .order-row { display: flex; align-items: center; gap: 8px; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }

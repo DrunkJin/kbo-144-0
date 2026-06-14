@@ -57,6 +57,13 @@ export function App() {
   const [oppYear, setOppYear] = useState(0);
   const [seasonSetup, setSeasonSetup] = useState<SeasonSetup | null>(null);
   const [arrangeTeam, setArrangeTeam] = useState<Team | null>(null);
+  const [seasonPlan, setSeasonPlan] = useState<{
+    opponents: ReturnType<typeof buildLeagueForYear>;
+    target: LeagueConstants;
+    year: number;
+    seed: number;
+    oppBoost: number;
+  } | null>(null);
 
   useEffect(() => {
     loadMeta()
@@ -143,48 +150,51 @@ export function App() {
     setSelectedSlot(null);
   }
 
-  function toArrange() {
-    if (!draft) return;
-    setArrangeTeam(draftToTeam(draft, "내 드림팀"));
-    setPhase("arrange");
-  }
-
-  async function startSeason(myTeam: Team) {
+  // Determine the opponent league NOW (so the arrange screen can show live odds),
+  // then go arrange the lineup.
+  async function toArrange() {
     if (!draft || !settings) return;
     setBusy(true);
     try {
-    const rng = mulberry32(hashSeed(draft.picks.map((p) => p.id).join("|")));
-    let year: number;
-    let opponents: ReturnType<typeof buildLeagueForYear>;
-    if (settings.opponentMode === "fixed") {
-      year = settings.opponentYear;
-      opponents = buildLeagueForYear(await loadSeason(year), year);
-    } else {
-      const yearsInRange = seasons.filter((y) => y >= settings.yearMin && y <= settings.yearMax);
-      year = yearsInRange[0];
-      opponents = [];
-      for (let i = 0; i < 60; i++) {
-        year = yearsInRange[Math.floor(rng() * yearsInRange.length)];
-        opponents = buildLeagueForYear(players, year); // already loaded (in range)
-        if (opponents.length >= 4) break;
+      const rng = mulberry32(hashSeed(draft.picks.map((p) => p.id).join("|")));
+      let year: number;
+      let opponents: ReturnType<typeof buildLeagueForYear>;
+      if (settings.opponentMode === "fixed") {
+        year = settings.opponentYear;
+        opponents = buildLeagueForYear(await loadSeason(year), year);
+      } else {
+        const yearsInRange = seasons.filter((y) => y >= settings.yearMin && y <= settings.yearMax);
+        year = yearsInRange[0];
+        opponents = [];
+        for (let i = 0; i < 60; i++) {
+          year = yearsInRange[Math.floor(rng() * yearsInRange.length)];
+          opponents = buildLeagueForYear(players, year);
+          if (opponents.length >= 4) break;
+        }
       }
-    }
-    const seed = hashSeed(draft.picks.map((p) => p.id).join("|") + ":" + year);
-    const target = leagueTable[year] ?? DEFAULT_LEAGUE;
-    const oppBoost = oppBoostFor(settings.difficulty);
-    setOppYear(year);
-
-    if (settings.seasonMode === "manager") {
-      setSeasonSetup({ myTeam, opponents, target, year, seed, oppBoost });
-      setPhase("season");
-    } else {
-      setResult(simulateLeague(myTeam, opponents, { totalGames: 144, seed, lg: target, table: leagueTable, oppBoost }));
-      setPhase("result");
-    }
+      const seed = hashSeed(draft.picks.map((p) => p.id).join("|") + ":" + year);
+      const target = leagueTable[year] ?? DEFAULT_LEAGUE;
+      const oppBoost = oppBoostFor(settings.difficulty);
+      setSeasonPlan({ opponents, target, year, seed, oppBoost });
+      setOppYear(year);
+      setArrangeTeam(draftToTeam(draft, "내 드림팀"));
+      setPhase("arrange");
     } catch (e) {
       setError(String(e));
     } finally {
       setBusy(false);
+    }
+  }
+
+  function startSeason(myTeam: Team) {
+    if (!settings || !seasonPlan) return;
+    const { opponents, target, seed, oppBoost } = seasonPlan;
+    if (settings.seasonMode === "manager") {
+      setSeasonSetup({ myTeam, opponents, target, year: seasonPlan.year, seed, oppBoost });
+      setPhase("season");
+    } else {
+      setResult(simulateLeague(myTeam, opponents, { totalGames: 144, seed, lg: target, table: leagueTable, oppBoost }));
+      setPhase("result");
     }
   }
 
@@ -312,8 +322,17 @@ export function App() {
         </div>
       )}
 
-      {phase === "arrange" && arrangeTeam && (
-        <Arrange team={arrangeTeam} showStats={showStats} table={leagueTable} onConfirm={startSeason} />
+      {phase === "arrange" && arrangeTeam && seasonPlan && (
+        <Arrange
+          team={arrangeTeam}
+          showStats={showStats}
+          table={leagueTable}
+          opponents={seasonPlan.opponents}
+          target={seasonPlan.target}
+          oppBoost={seasonPlan.oppBoost}
+          opponentYear={seasonPlan.year}
+          onConfirm={startSeason}
+        />
       )}
 
       {phase === "season" && seasonSetup && (

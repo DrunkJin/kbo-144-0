@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Player, Team } from "../types.ts";
 import type { LeagueTable } from "../sim/leagueTable.ts";
-import { wOBA, fip } from "../sim/runEstimator.ts";
+import { wOBA, fip, type LeagueConstants } from "../sim/runEstimator.ts";
+import { rankDistribution } from "../sim/season.ts";
 import { TeamRating } from "./TeamRating.tsx";
 import { posKR, statLine } from "./fmt.ts";
 
@@ -53,11 +54,15 @@ function OrderList({
 }
 
 export function Arrange({
-  team, showStats, table, onConfirm,
+  team, showStats, table, opponents, target, oppBoost, opponentYear, onConfirm,
 }: {
   team: Team;
   showStats: boolean;
   table?: LeagueTable;
+  opponents: Team[];
+  target: LeagueConstants;
+  oppBoost: number;
+  opponentYear: number;
   onConfirm: (ordered: Team) => void;
 }) {
   // Sensible defaults: bat best hitters first, ace first in the rotation.
@@ -68,10 +73,39 @@ export function Arrange({
     () => [...team.rotation].sort((a, b) => fip(a.pit!) - fip(b.pit!)),
   );
 
+  const odds = useMemo(
+    () => (showStats
+      ? rankDistribution({ ...team, lineup, rotation }, opponents,
+          { totalGames: 144, lg: target, table, oppBoost }, 700)
+      : null),
+    [lineup, rotation, opponents, target, table, oppBoost, showStats, team],
+  );
+  const top3 = odds ? odds.rankProb[0] + (odds.rankProb[1] ?? 0) + (odds.rankProb[2] ?? 0) : 0;
+
   return (
     <div>
       <h1 style={{ fontSize: "1.4rem" }}>라인업 정렬</h1>
-      <p className="sub">1번=출루·주루형, 3·4번=장타자처럼 역할에 맞게 배치하면 팀 OVR이 오릅니다.</p>
+      <p className="sub">1번=출루·주루형, 3·4번=장타자처럼 역할에 맞게 배치하면 팀 OVR과 우승 확률이 오릅니다.</p>
+
+      {odds && (
+        <div className="card odds">
+          <div className="muted" style={{ marginBottom: 8 }}>vs {opponentYear} 리그 · 예상 순위 (현재 라인업 기준)</div>
+          <div className="odds-row">
+            <div><div className="muted">우승</div><b className="perfect">{(odds.rankProb[0] * 100).toFixed(0)}%</b></div>
+            <div><div className="muted">3위 이내</div><b>{(top3 * 100).toFixed(0)}%</b></div>
+            <div><div className="muted">예상 순위</div><b>{odds.expRank.toFixed(1)}위</b></div>
+            <div><div className="muted">예상 승수</div><b>{odds.expWins.toFixed(0)}승</b></div>
+          </div>
+          <div className="odds-bars">
+            {odds.rankProb.map((p, i) => (
+              <div className="odds-bar" key={i} title={`${i + 1}위 ${(p * 100).toFixed(0)}%`}>
+                <div className="odds-fill" style={{ height: `${Math.max(2, p * 100)}%` }} />
+                <span>{i + 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showStats && <TeamRating team={{ ...team, lineup, rotation }} table={table} />}
 

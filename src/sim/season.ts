@@ -207,6 +207,41 @@ export function buildStandings(
   return { standings, myRank: standings.findIndex((r) => r.isMe) + 1 };
 }
 
+export interface RankOdds {
+  rankProb: number[]; // index 0 = P(finish 1st), … length = team count
+  expRank: number; // expected finishing rank
+  expWins: number; // mean wins
+  teams: number;
+  runs: number;
+}
+
+/** Monte-Carlo the full league many times to get the rank/odds distribution. */
+export function rankDistribution(
+  myTeam: Team,
+  opponents: Team[],
+  opts: SimOptions = {},
+  runs = 1500,
+): RankOdds {
+  const teams = opponents.length + 1;
+  const counts = new Array(teams).fill(0);
+  let rankSum = 0;
+  let winSum = 0;
+  const baseSeed = opts.seed ?? 144000;
+  for (let i = 0; i < runs; i++) {
+    const r = simulateLeague(myTeam, opponents, { ...opts, seed: baseSeed + i * 2654435761 });
+    counts[r.myRank - 1]++;
+    rankSum += r.myRank;
+    winSum += r.wins;
+  }
+  return {
+    rankProb: counts.map((c) => c / runs),
+    expRank: rankSum / runs,
+    expWins: winSum / runs,
+    teams,
+    runs,
+  };
+}
+
 /** Instant full-league simulation: my games + opponent round-robin → standings. */
 export function simulateLeague(myTeam: Team, opponents: Team[], opts: SimOptions = {}): LeagueResult {
   const totalGames = opts.totalGames ?? 144;

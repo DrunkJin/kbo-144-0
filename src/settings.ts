@@ -47,7 +47,7 @@ export function ratingsVisible(s: GameSettings): boolean {
 /** Opponent strength boost by difficulty — how hard the league pushes back.
  *  Tuned so Normal lands even a stacked team mid-table (1위 is a real chase). */
 export function oppBoostFor(d: Difficulty): number {
-  return d === "easy" ? 0.06 : d === "normal" ? 0.16 : 0.24;
+  return d === "easy" ? 0 : d === "normal" ? 0.08 : 0.15;
 }
 
 export const DIFFICULTY_INFO: Record<Difficulty, { label: string; desc: string }> = {
