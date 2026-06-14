@@ -136,6 +136,16 @@ h1 .num { color: var(--accent); }
   .order-role { width: 64px; font-size: 0.66rem; }
 }
 
+/* end-of-season awards */
+.awards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.award { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+.award-icon { font-size: 1.6rem; flex: 0 0 auto; }
+.award-body { flex: 1 1 auto; min-width: 0; }
+.award-title { font-size: 0.72rem; color: var(--gold); font-weight: 800; }
+.award-name { font-weight: 700; }
+.award-sub { font-size: 0.72rem; color: var(--muted); }
+.award-stat { font-weight: 800; color: var(--accent); font-size: 0.95rem; flex: 0 0 auto; text-align: right; }
+
 /* share card */
 .share { text-align: center; }
 .share-canvas { width: 100%; max-width: 340px; border-radius: 14px; border: 1px solid var(--border); }

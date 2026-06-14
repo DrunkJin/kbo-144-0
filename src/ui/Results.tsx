@@ -1,14 +1,19 @@
 import type { LeagueResult } from "../sim/season.ts";
+import type { Team } from "../types.ts";
+import { computeAwards } from "../sim/awards.ts";
 import { ShareCard } from "./ShareCard.tsx";
+import { posKR } from "./fmt.ts";
 
 export function Results({
-  result, opponentYear, onRestart,
+  result, opponentYear, team, onRestart,
 }: {
   result: LeagueResult;
   teamName?: string;
   opponentYear: number;
+  team?: Team;
   onRestart: () => void;
 }) {
+  const awards = team ? computeAwards(team) : [];
   return (
     <div>
       <div className={`bigrecord ${result.perfect ? "perfect" : ""}`}>
@@ -51,6 +56,25 @@ export function Results({
           ))}
         </tbody>
       </table>
+
+      {awards.length > 0 && (
+        <>
+          <h2 className="section-title">🏅 우리 팀 타이틀</h2>
+          <div className="awards">
+            {awards.map((a) => (
+              <div className="award" key={a.title}>
+                <div className="award-icon">{a.icon}</div>
+                <div className="award-body">
+                  <div className="award-title">{a.title}</div>
+                  <div className="award-name">{a.player.name}</div>
+                  <div className="award-sub">{a.player.season} {a.player.team} · {posKR(a.player.primaryPos)}</div>
+                </div>
+                <div className="award-stat">{a.stat}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <h2 className="section-title">공유 카드</h2>
       <ShareCard result={result} year={opponentYear} />

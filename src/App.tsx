@@ -57,6 +57,7 @@ export function App() {
   const [oppYear, setOppYear] = useState(0);
   const [seasonSetup, setSeasonSetup] = useState<SeasonSetup | null>(null);
   const [arrangeTeam, setArrangeTeam] = useState<Team | null>(null);
+  const [seasonTeam, setSeasonTeam] = useState<Team | null>(null);
   const [seasonPlan, setSeasonPlan] = useState<{
     opponents: ReturnType<typeof buildLeagueForYear>;
     target: LeagueConstants;
@@ -188,6 +189,7 @@ export function App() {
 
   function startSeason(myTeam: Team) {
     if (!settings || !seasonPlan) return;
+    setSeasonTeam(myTeam);
     const { opponents, target, seed, oppBoost } = seasonPlan;
     if (settings.seasonMode === "manager") {
       setSeasonSetup({ myTeam, opponents, target, year: seasonPlan.year, seed, oppBoost });
@@ -349,7 +351,7 @@ export function App() {
       )}
 
       {phase === "result" && result && (
-        <Results result={result} opponentYear={oppYear} onRestart={() => { setSeasonSetup(null); setArrangeTeam(null); setPhase("settings"); }} />
+        <Results result={result} opponentYear={oppYear} team={seasonTeam ?? undefined} onRestart={() => { setSeasonSetup(null); setArrangeTeam(null); setPhase("settings"); }} />
       )}
     </div>
   );
