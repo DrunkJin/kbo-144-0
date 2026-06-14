@@ -11,6 +11,7 @@ export interface BatLine {
   d2B: number; // doubles
   d3B: number; // triples
   HR: number;
+  RBI: number;
   BB: number;
   HBP: number;
   SO: number;
@@ -29,6 +30,7 @@ export interface PitLine {
   BF: number; // batters faced
   GS: number; // games started (to classify SP vs RP)
   SV: number; // saves (to flag closers)
+  W: number; // wins (for 다승왕)
 }
 
 export type Position =

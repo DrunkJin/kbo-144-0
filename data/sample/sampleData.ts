@@ -9,13 +9,13 @@ import type { WheelSegment } from "../../src/draft/draft.ts";
 
 function bat(o: Partial<BatLine>): BatLine {
   return {
-    PA: 0, AB: 0, H: 0, d2B: 0, d3B: 0, HR: 0, BB: 0, HBP: 0, SO: 0, SB: 0,
+    PA: 0, AB: 0, H: 0, d2B: 0, d3B: 0, HR: 0, RBI: 0, BB: 0, HBP: 0, SO: 0, SB: 0,
     ...o,
   };
 }
 function pit(o: Partial<PitLine>): PitLine {
   return {
-    IP: 0, ER: 0, H: 0, HR: 0, BB: 0, HBP: 0, SO: 0, BF: 0, GS: 0, SV: 0,
+    IP: 0, ER: 0, H: 0, HR: 0, BB: 0, HBP: 0, SO: 0, BF: 0, GS: 0, SV: 0, W: 0,
     ...o,
   };
 }

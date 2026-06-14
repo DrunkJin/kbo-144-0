@@ -36,11 +36,12 @@ const COLUMN_MAP = {
   // batting
   PA: ["pa", "타석"], AB: ["ab", "타수"], H: ["h", "안타"],
   d2B: ["2b", "doubles", "2루타"], d3B: ["3b", "triples", "3루타"], HR: ["hr", "홈런"],
+  RBI: ["rbi", "타점"],
   BB: ["bb", "볼넷"], HBP: ["hp", "hbp", "사구"], SO: ["so", "k", "삼진"], SB: ["sb", "도루"],
   // pitching
   IP: ["ip", "이닝"], ER: ["er", "자책"], pH: ["h", "피안타"], pHR: ["hr", "피홈런"],
   pBB: ["bb", "볼넷"], pHBP: ["hp", "hbp", "사구"], pSO: ["so", "k", "탈삼진"],
-  BF: ["tbf", "bf", "상대타자"], GS: ["gs", "선발"], SV: ["s", "sv", "세이브"],
+  BF: ["tbf", "bf", "상대타자"], GS: ["gs", "선발"], SV: ["s", "sv", "세이브"], W: ["w", "승"],
 } as const;
 
 /** KBO/baseball IP notation: 8.1 = 8⅓, 8.2 = 8⅔. Convert to true decimal. */
@@ -121,6 +122,7 @@ function toPlayer(rec: Record<string, string>, kind: "bat" | "pit"): Player | nu
       PA: num(pick(rec, COLUMN_MAP.PA)), AB: num(pick(rec, COLUMN_MAP.AB)),
       H: num(pick(rec, COLUMN_MAP.H)), d2B: num(pick(rec, COLUMN_MAP.d2B)),
       d3B: num(pick(rec, COLUMN_MAP.d3B)), HR: num(pick(rec, COLUMN_MAP.HR)),
+      RBI: num(pick(rec, COLUMN_MAP.RBI)),
       BB: num(pick(rec, COLUMN_MAP.BB)), HBP: num(pick(rec, COLUMN_MAP.HBP)),
       SO: num(pick(rec, COLUMN_MAP.SO)), SB: num(pick(rec, COLUMN_MAP.SB)),
     };
@@ -138,6 +140,7 @@ function toPlayer(rec: Record<string, string>, kind: "bat" | "pit"): Player | nu
       BB: num(pick(rec, COLUMN_MAP.pBB)), HBP: num(pick(rec, COLUMN_MAP.pHBP)),
       SO: num(pick(rec, COLUMN_MAP.pSO)), BF: num(pick(rec, COLUMN_MAP.BF)),
       GS: num(pick(rec, COLUMN_MAP.GS)), SV: num(pick(rec, COLUMN_MAP.SV)),
+      W: num(pick(rec, COLUMN_MAP.W)),
     };
     if (pit.IP < 1) return null;
     const pos = inferPitPos(pit);

@@ -135,5 +135,5 @@ export function Arrange({
 }
 
 function emptyBat() {
-  return { PA: 1, AB: 1, H: 0, d2B: 0, d3B: 0, HR: 0, BB: 0, HBP: 0, SO: 0, SB: 0 };
+  return { PA: 1, AB: 1, H: 0, d2B: 0, d3B: 0, HR: 0, RBI: 0, BB: 0, HBP: 0, SO: 0, SB: 0 };
 }

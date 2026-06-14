@@ -39,11 +39,13 @@ export function computeAwards(team: Team): Award[] {
   add("타격왕", "🎯", leader(hitters, (p) => AVG(p.bat!), (p) => p.bat!.AB > 0),
     (p) => `타율 ${AVG(p.bat!).toFixed(3).replace(/^0/, "")}`);
   add("홈런왕", "💥", leader(hitters, (p) => p.bat!.HR, () => true), (p) => `${p.bat!.HR}홈런`);
+  add("타점왕", "🧨", leader(hitters, (p) => p.bat!.RBI, () => true), (p) => `${p.bat!.RBI}타점`);
   add("출루왕", "🧲", leader(hitters, (p) => OBP(p.bat!), (p) => p.bat!.PA > 0),
     (p) => `출루율 ${OBP(p.bat!).toFixed(3).replace(/^0/, "")}`);
   add("장타왕", "🚀", leader(hitters, (p) => slg(p.bat!), (p) => p.bat!.AB > 0),
     (p) => `장타율 ${slg(p.bat!).toFixed(3).replace(/^0/, "")}`);
   add("도루왕", "🏃", leader(hitters, (p) => p.bat!.SB, () => true), (p) => `${p.bat!.SB}도루`);
+  add("다승왕", "🏅", leader(pitchers, (p) => p.pit!.W, () => true), (p) => `${p.pit!.W}승`);
   add("평균자책점왕", "🛡️", leader(pitchers, (p) => -era(p.pit!), (p) => p.pit!.IP >= 20),
     (p) => `ERA ${era(p.pit!).toFixed(2)}`);
   add("탈삼진왕", "⚡", leader(pitchers, (p) => p.pit!.SO, () => true), (p) => `${p.pit!.SO}탈삼진`);
